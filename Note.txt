@@ -1,0 +1,15 @@
+############## DATA FOLLOW INFO #############
+
+1. Setup pin, SPI and module camera
+2. capture image:
+    start with : `ArduCAMObject.clear_fifo_flag(); ArduCAMObject.start_capture();`
+    end when: `ArduCAMObject.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)` return 0
+3. data
+# buffer_fifo in camera save the data
+# data is JPEG
+# each pakage have a header and footer:
+#       header: 0xFFD8
+#       footer: 0xFFD9
+# get one bytes via `SPI.transfer(0x00)`
+
+################  END  #################
