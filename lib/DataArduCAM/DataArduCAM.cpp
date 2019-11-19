@@ -10,22 +10,24 @@ DataArduCAM::DataArduCAM(){
 
 DataArduCAM::DataArduCAM(byte model,int CS, int sizeOfImage,byte formatData,
                          int sck,int miso,int mosi,int ss, int sda, int scl){
-	//I2C START SDA, SCL
-	Wire.begin(sda,scl);
+    this->model=model;
+    this->CS = CS;
+    this->sizeOfImage=sizeOfImage;
+    this->formatData=formatData;
+    this->sck=sck;
+    this->miso=miso;
+    this->mosi=mosi;
+    this->ss=ss;
+    this->sda=sda;
+    this->scl=scl;
 	arduCAM = new ArduCAM(model,CS);
 	Serial.println("Created CAM object");
-	arduCAM->InitCAM();
-	Serial.println("Inited CAM object");
-	arduCAM->set_format(formatData);
-	Serial.println("Inited format");
-	setSizeImage(model,formatData,sizeOfImage);
-	Serial.println("Setted size");
-	arduCAM->clear_fifo_flag();
+	pinMode(CS,OUTPUT);
+	//I2C START SDA, SCL
+	Wire.begin(sda,scl);
 	SPIFrequency = 8000000;
 	SPI.begin(sck, miso, mosi, ss);
 	SPI.setFrequency(SPIFrequency);
-
-
 	if(checkSPI()) {
 		Serial.println("SPI check done");
 	}
@@ -38,6 +40,12 @@ DataArduCAM::DataArduCAM(byte model,int CS, int sizeOfImage,byte formatData,
 	else{
 		Serial.println("CAM error!!");
 	}
+	arduCAM->set_format(formatData);
+	Serial.println("Inited format");
+	arduCAM->InitCAM();
+	Serial.println("Inited CAM object");
+	setSizeImage(model,formatData,sizeOfImage);
+	Serial.println("Setted size");
 	arduCAM->clear_fifo_flag();
 	Serial.println("Init done");
 	delay(500);
@@ -117,120 +125,118 @@ void DataArduCAM::processJPEG(uint8_t* buffer,size_t bufferSize){
 	Serial.println("Start cap");
 	while (!arduCAM->get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 	Serial.println("Cap done");
-	uint8_t temp = 0, temp_last = 0;
-	uint32_t length = 0;
-	length = arduCAM->read_fifo_length();
-	Serial.println(length, DEC);
-	if (length >= MAX_FIFO_SIZE) //512 kb
-	{
-		Serial.println(F("ACK CMD Over size. END"));
-		return;
-	}
-	if (length == 0 ) //0 kb
-	{
-		Serial.println(F("ACK CMD Size is 0. END"));
-		return;
-	}
 	arduCAM->CS_LOW();
-	arduCAM->set_fifo_burst();//Set fifo burst mode
-	temp =  SPI.transfer(0x00);
-    Serial.printf("0x%2x\n",temp);
-	length--;
-	while ( length-- )
+	arduCAM->set_fifo_burst();
+	i = 0;
+	while ( len-- )
 	{
 		temp_last = temp;
 		temp =  SPI.transfer(0x00);
-        Serial.printf("0x%2x\n",temp);
-        delay(200);
+		// Serial.printf("0x%2x\n",temp);
+		// delay(200);
+		//Read JPEG data from FIFO
+		if ( (temp == 0xD9) && (temp_last == 0xFF) )         //If find the end ,break while,
+		{
+			buffer[i++] = temp;             //save the last  0XD9
+			//Write the remain bytes in the buffer
+			Serial.println("CATCH!!");
+			is_header = false;
+			i = 0;
+			arduCAM->CS_HIGH();
+			break;
+		}
 		if (is_header == true)
 		{
-			Serial.write(temp);
+			//Write image data to buffer if not full
+			if (i < bufferSize)
+				buffer[i++] = temp;
+			else
+			{
+				//Write bufferSize bytes image data to file
+				Serial.println("CATCH!!");
+				i = 0;
+				buffer[i++] = temp;
+			}
 		}
 		else if ((temp == 0xD8) & (temp_last == 0xFF))
 		{
 			is_header = true;
-			Serial.println(F("ACK IMG END"));
-			Serial.write(temp_last);
-			Serial.write(temp);
+			buffer[i++] = temp_last;
+			buffer[i++] = temp;
 		}
-		if ( (temp == 0xD9) && (temp_last == 0xFF) ) //If find the end ,break while,
-			break;
-		delayMicroseconds(15);
 	}
-	arduCAM->CS_HIGH();
-	is_header = false;
-	return;
 }
 
-/*
-   void DataArduCAM::processData(void (*pHeaderProc)(),void (*pProc)(uint8_t *buffer, size_t size), bool (*pcheckBreak)()){
-    uint8_t temp = 0, temp_last = 0;
-    int i = 0;
-    bool is_header = false;
-    while (1) {
-        //strart capture data
-        arduCAM->clear_fifo_flag();
-        arduCAM->start_capture();
-        while (!arduCAM->get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
-        size_t len = arduCAM->read_fifo_length();
-        if (len >= MAX_FIFO_SIZE)         //8M
-        {
-            Serial.println(F("Over size."));
-            continue;
-        }
-        if (len == 0 )         //0 kb
-        {
-            Serial.println(F("Size is 0."));
-            continue;
-        }
-        arduCAM->CS_LOW();
-        arduCAM->set_fifo_burst();
+void DataArduCAM::processJPEG(uint8_t* buffer,size_t bufferSize,void (*pHeaderProc)(),void (*pProc)(uint8_t *buffer, size_t size), bool (*pcheckBreak)()){
+    delay(1000);
+	temp=0;
+	temp_last=0;
+	i=0;
+	bool is_header = false;
+	while (1) {
+        arduCAM->flush_fifo();
+    	arduCAM->clear_fifo_flag();
+    	arduCAM->start_capture();
+    	while (!arduCAM->get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+    	arduCAM->CS_LOW();
+    	arduCAM->set_fifo_burst();
+        uint32_t len  = arduCAM->read_fifo_length();
+		if (len >= MAX_FIFO_SIZE)         //8M
+		{
+			Serial.println(F("Over size."));
+			continue;
+		}
+		if (len == 0 )         //0 kb
+		{
+			Serial.println(F("Size is 0."));
+			continue;
+		}
+		arduCAM->CS_LOW();
+		arduCAM->set_fifo_burst();
+		if (pcheckBreak()) break;
 
-        // proc hearder
         pHeaderProc();
-
-        // start read data
-        while ( len-- )
-        {
-            temp_last = temp;
-            temp =  SPI.transfer(0x00);
-
-            //Read JPEG data from FIFO
-            if ( (temp == 0xD9) && (temp_last == 0xFF) )             //If find the end ,break while,
-            {
-                buffer[i++] = temp;                 //save the last  0xsD9
-                //Write the remain bytes in the buffer
-                arduCAM->CS_HIGH();;
-                if (pcheckBreak()) break;
-                pProc(&buffer[0], i);
-                is_header = false;
-                i = 0;
-            }
-            if (is_header == true)
-            {
-                //Write image data to buffer if not full
-                if (i < bufferSize)
-                    buffer[i++] = temp;
-                else
-                {
-                    //Write bufferSize bytes image data to file
-                    arduCAM->CS_HIGH();
+		while ( len-- )
+		{
+			temp_last = temp;
+			temp =  SPI.transfer(0x00);
+            // Serial.printf("0x%2x\n",temp);
+            // delay(200);
+//Read JPEG data from FIFO
+			if ( (temp == 0xD9) && (temp_last == 0xFF) )             //If find the end ,break while,
+			{
+				buffer[i++] = temp;                 //save the last  0xsD9
+//Write the remain bytes in the buffer
+				arduCAM->CS_HIGH();
+				if (pcheckBreak()) break;
+				pProc(&buffer[0], i);
+				is_header = false;
+				i = 0;
+			}
+			if (is_header == true)
+			{
+//Write image data to buffer if not full
+				if (i < bufferSize)
+					buffer[i++] = temp;
+				else
+				{
+//Write bufferSize bytes image data to file
+					arduCAM->CS_HIGH();
                     if (pcheckBreak()) break;
-                    pProc(&buffer[0], bufferSize);
-                    i = 0;
-                    buffer[i++] = temp;
-                    arduCAM->CS_LOW();
-                    arduCAM->set_fifo_burst();
-                }
-            }
-            else if ((temp == 0xD8) & (temp_last == 0xFF))
-            {
-                is_header = true;
-                buffer[i++] = temp_last;
-                buffer[i++] = temp;
-            }
-        }
-        if (pcheckBreak()) break;
-    }
-   }
- */
+    				pProc(&buffer[0], i);
+					i = 0;
+					buffer[i++] = temp;
+					arduCAM->CS_LOW();
+					arduCAM->set_fifo_burst();
+				}
+			}
+			else if ((temp == 0xD8) & (temp_last == 0xFF))
+			{
+				is_header = true;
+				buffer[i++] = temp_last;
+				buffer[i++] = temp;
+			}
+		}
+		if (pcheckBreak()) break;
+	}
+}

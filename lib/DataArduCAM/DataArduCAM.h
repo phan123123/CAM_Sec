@@ -98,7 +98,7 @@ public:
             - pFunc: process with data of per picture
             - checkBreak: to check break loop (true -> break and false-> continue)
     */
-    // void processData(void (*pHeaderProc)(),void(*pFunc)(uint8_t *buffer,size_t size),bool (*checkBreak)());
+    void processJPEG(uint8_t* buffer,size_t bufferSize,void (*pHeaderProc)(),void(*pFunc)(uint8_t *buffer,size_t size),bool (*checkBreak)());
     void processJPEG(uint8_t* buffer, size_t bufferSize);
 protected:
 
@@ -106,7 +106,9 @@ private:
     ArduCAM *arduCAM;
     long SPIFrequency;          // default = 8000000
     uint8_t temp, temp_last;
-    int i;
+    int i;//count
+    byte model,formatData;
+    int CS,sizeOfImage,sck, miso, mosi,ss, sda,scl;
 
     //set size of picture
     void setSizeImage(byte model, byte formatData,int sizeOfImage);

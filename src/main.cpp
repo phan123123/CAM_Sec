@@ -27,16 +27,16 @@ void process(uint8_t *buffer, size_t size){
     Serial.println("ok");
     // Serial.println(size);
     Serial.println("<<<<<<<<<<<<<<<<<<<<<<");
+    delay(200);
 }
 
 void setup(){
 	Serial.begin(115200);
 	dataCAM = new DataArduCAM(OV2640, CS,OV2640_160x120,JPEG,14,27,13,16,4,5);
-    pinMode(CS,OUTPUT);
-    dataCAM->processJPEG(buffer, bufferSize);
+    // dataCAM->processJPEG(buffer, bufferSize);
 }
 
 void loop(){
 	// dataCAM.processData(&headerProc,&process,&checkBreak);
-
+    dataCAM->processJPEG(buffer,bufferSize, &headerProc, &process, &checkBreak);
 }
