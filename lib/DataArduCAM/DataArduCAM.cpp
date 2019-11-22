@@ -194,8 +194,6 @@ void DataArduCAM::processJPEG(uint8_t* buffer,size_t bufferSize,void (*pHeaderPr
 		arduCAM->CS_LOW();
 		arduCAM->set_fifo_burst();
 		if (pcheckBreak()) break;
-
-        pHeaderProc();
 		while ( len-- )
 		{
 			temp_last = temp;
@@ -205,6 +203,7 @@ void DataArduCAM::processJPEG(uint8_t* buffer,size_t bufferSize,void (*pHeaderPr
 //Read JPEG data from FIFO
 			if ( (temp == 0xD9) && (temp_last == 0xFF) )             //If find the end ,break while,
 			{
+                pHeaderProc();
 				buffer[i++] = temp;                 //save the last  0xsD9
 //Write the remain bytes in the buffer
 				arduCAM->CS_HIGH();
