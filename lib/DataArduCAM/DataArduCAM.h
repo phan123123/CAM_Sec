@@ -99,7 +99,6 @@ public:
             - checkBreak: to check break loop (true -> break and false-> continue)
     */
     void processJPEG(uint8_t* buffer,size_t bufferSize,void (*pHeaderProc)(),void(*pFunc)(uint8_t *buffer,size_t size),bool (*checkBreak)());
-    void processJPEG(uint8_t* buffer, size_t bufferSize);
 protected:
 
 private:
