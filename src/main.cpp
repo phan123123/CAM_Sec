@@ -15,32 +15,20 @@
 #include <WiFi.h>
 #include <WebSocketsClient.h>
 #include "DataArduCAM.h"
-
+// #include "mbedtls/aes.h"
 WebSocketsClient webSocket;
 const int CS = 16;
 const char* ssid = "InternetHV-02"; //Enter SSID
 const char* password = "1234567890"; //Enter Password
-const char* address = "192.168.8.12";
+const char* address = "192.168.8.11";
 const int port = 1337;
 
-
+// mbedtls_aes_context aes; //context aes
+// unsigned char outputAES[16]; //buffer output
 
 DataArduCAM *dataCAM;
 static const size_t bufferSize = 30096; // set default buffer size
 static uint8_t buffer[bufferSize] = {0xFF};  // buffer for get data
-//
-// void headerProc(){
-//  Serial.println(">>>>>>>>>>>>>>>>>>>");
-// }
-// bool checkBreak(){
-//  return false;
-// }
-// void process(uint8_t *buffer, size_t size){
-//  Serial.println("ok");
-//  // Serial.println(size);
-//  Serial.println("<<<<<<<<<<<<<<<<<<<<<<");
-//  delay(200);
-// }
 
 // ###########################################################
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
@@ -69,6 +57,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 		case WStype_FRAGMENT_TEXT_START:
 		case WStype_FRAGMENT_BIN_START:
 		case WStype_FRAGMENT:
+		case WStype_PING:
+		case WStype_PONG:
 		case WStype_FRAGMENT_FIN:
 			break;
 	}
@@ -91,8 +81,17 @@ bool checkConnect(){
 }
 
 void setup(){
+	// init cam
 	Serial.begin(115200);
 	dataCAM = new DataArduCAM(OV2640, CS,OV2640_640x480,JPEG,14,27,13,16,4,5);
+
+	//init aes mode
+	// char * key = "abcdefghijklmnop"; //key len 16 and input len 16
+	// mbedtls_aes_init( &aes );
+	// mbedtls_aes_setkey_enc( &aes, (const unsigned char*) key, strlen(key) * 8 );
+
+
+	//init wifi
 	WiFi.begin(ssid, password);
 	while (WiFi.status() != WL_CONNECTED) {
 		Serial.println("Connecting to wifi...");
@@ -103,9 +102,13 @@ void setup(){
 	webSocket.begin(address, port);
 	// event handler
 	webSocket.onEvent(webSocketEvent);
-	// dataCAM->processJPEG(buffer, bufferSize);
+
+
+	//mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)input, outputAES);
+
 }
 
 void loop(){
 	dataCAM->processJPEG(buffer, bufferSize, &sendHeader, &sendBinary, &checkConnect);
+	// mbedtls_aes_free( &aes );
 }
