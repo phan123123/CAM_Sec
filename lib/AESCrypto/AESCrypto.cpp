@@ -11,6 +11,10 @@ void AESCrypto::init(char *key, unsigned char* iv){
     this->block_size = strlen(key);
     mbedtls_aes_setkey_enc( &this->aes, (const unsigned char*) this->key, this->block_size * 8 );
     this->iv = iv;
+    Serial.println("iv: ");
+    for(int i =0;i< this->block_size; i++){
+        Serial.printf("%2x",this->iv[i]);
+    }
 }
 
 void AESCrypto::free(){

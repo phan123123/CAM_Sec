@@ -1,25 +1,18 @@
 #include <Arduino.h>
-#include "mbedtls/aes.h"
-#include "AESCrypto.h"
+#include "mbedtls/pk.h"
 
-unsigned char outputAES[1000]; //buffer output
-AESCrypto* aesCrypto;
+int ret = 0;
+mbedtls_pk_context pk;
 
 void setup(){
-    //init aes mode
-    Serial.begin(115200);
-    aesCrypto = new AESCrypto();
-    char * key = "abcdefghijklmnop";                                                                                     //key len 16 and input len 16
-    unsigned char iv[] = {0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-    aesCrypto->init(key,iv);
-    unsigned char input[] = "Test aes cbc mode in esp32 test 123 01 - test 02 - test - 03 -stack2- test3";
-    int len = sizeof(input)/sizeof(unsigned char)-1;
-    int new_len = aesCrypto->encryptCBC(input,len,outputAES);
-    Serial.println("\nDone");
-    for(int i=0;i<new_len;i++){
-        Serial.printf("%2x",outputAES[i]);
+    mbedtls_pk_init( &pk );
+    /*
+     * Read the RSA public key
+     */
+    if( ( ret = mbedtls_pk_parse_public_keyfile( &pk, "our-key.pub" ) ) != 0 )
+    {
+        printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
     }
-    aesCrypto->free();
 }
 
 void loop(){
