@@ -9,12 +9,14 @@ AESCrypto::~AESCrypto(){
 void AESCrypto::init(char *key, unsigned char* iv){
     this->key = key;
     this->block_size = strlen(key);
+    mbedtls_aes_init( &this->aes );
     mbedtls_aes_setkey_enc( &this->aes, (const unsigned char*) this->key, this->block_size * 8 );
     this->iv = iv;
     Serial.println("iv: ");
     for(int i =0;i< this->block_size; i++){
-        Serial.printf("%2x",this->iv[i]);
+        Serial.printf("%2x ",this->iv[i]);
     }
+    Serial.println("############");
 }
 
 void AESCrypto::free(){
@@ -22,6 +24,7 @@ void AESCrypto::free(){
 }
 
 int AESCrypto::encryptCBC(unsigned char* input, int len_input, unsigned char* bufferOutput){
+    // padding
     int residual = len_input%(this->block_size);
     if(residual > 0){
         int new_len = len_input+this->block_size-residual;
@@ -31,6 +34,7 @@ int AESCrypto::encryptCBC(unsigned char* input, int len_input, unsigned char* bu
         for(int i = len_input; i < new_len ; i++){
             inputBuffer[i] = temp;
         }
+    // end padding
         mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, new_len, this->iv, inputBuffer, bufferOutput);
         return new_len;
     }
@@ -40,6 +44,7 @@ int AESCrypto::encryptCBC(unsigned char* input, int len_input, unsigned char* bu
     }
 }
 
-void AESCrypto::decryptCBC(unsigned char* input, int len_input, unsigned char* bufferOutput){
+int AESCrypto::decryptCBC(unsigned char* input, int len_input, unsigned char* bufferOutput){
     mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, len_input, this->iv, input, bufferOutput);
+    return len_input;
 }

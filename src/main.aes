@@ -3,6 +3,7 @@
 
 AESCrypto* aesCrypto;
 static unsigned char outputAES[30096];
+static unsigned char outputAES2[30096];
 int new_len;
 uint8_t data[] = "Test 01 02 03 04--- encript 01 02 03 04 05 06 07 08 09";
 
@@ -14,15 +15,28 @@ void setup(){
     char * key = "abcdefghijklmnop";                                                                                     //key len 16 and input len 16
     unsigned char iv[] = {0x97,0x98,0x99,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,0x10,0x11,0x12,0x13,0x14,0x15,0x16};
     aesCrypto->init(key,iv);
+
+    for (int i =0;i<sizeof(data)/sizeof(uint8_t);i++){
+        Serial.printf("%2x ",data[i]);
+    }
+    Serial.println("\n\n##################");
+
+    new_len = aesCrypto->encryptCBC(data,sizeof(data)/sizeof(uint8_t),outputAES);
+    aesCrypto->free();
+    for (int i =0;i<new_len;i++){
+        Serial.printf("%2x ",outputAES[i]);
+    }
+    Serial.println("\n\n##################");
+
+    aesCrypto->init(key,iv);
+    int new_len2 = aesCrypto->decryptCBC(outputAES,new_len,outputAES2);
+    aesCrypto->free();
+    for (int i =0;i<new_len2;i++){
+        Serial.printf("%2x ",outputAES2[i]);
+    }
+    Serial.println("\n\n##################");
 }
 
 void loop(){
-    new_len = aesCrypto->encryptCBC(data,sizeof(data)/sizeof(uint8_t),outputAES);
-    for (int i =0;i<new_len;i++){
-        if(outputAES[i] == 0x0){
-            Serial.println("\n\n##################");
-        }
-        Serial.printf("%2x",outputAES[i]);
-    }
-    Serial.println("\n\n##################");
+
 }

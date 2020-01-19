@@ -11,7 +11,7 @@ public:
     void init(char *key, unsigned char* iv);
     void free();
     int encryptCBC(unsigned char* input, int len_input, unsigned char* buffer);
-    void decryptCBC(unsigned char* input, int len_input, unsigned char* bufferOutput);
+    int decryptCBC(unsigned char* input, int len_input, unsigned char* bufferOutput);
 protected:
 private:
     char* key;
